@@ -24,10 +24,14 @@ def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embe
             for doc in docs
         )
         return serialized, docs
+    system_prompt = """You are a document assistant. You have ONE tool: retrieve_context.
 
-    system_prompt = """You are a helpful AI assistant with access to a document knowledge base.
-    ALWAYS use the retrieve_context tool to answer questions. Never use general knowledge.
-    Always cite your sources when using retrieved information."""
+RULE: For EVERY user question, you MUST call retrieve_context FIRST before answering anything.
+Do not answer from memory. Do not skip the tool call.
+
+After receiving the tool results, answer the question using only that information.
+If the tool returns no relevant information, say "I don't have enough information to answer that."
+Cite the source when possible."""
 
     llm = ChatOllama(model="qwen3:4b-instruct", think=False)
 
