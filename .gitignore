@@ -1,0 +1,5 @@
+qdrant_storage/
+temp_docs/
+__pycache__/
+.venv/
+.env
