@@ -15,7 +15,7 @@ We will be using a powerful modern AI stack:
 - **Docker & Qdrant**: To host our Vector Database natively for fast, scalable document retrieval.
 - **FastEmbed**: To generate highly accurate embeddings using Jina embeddings.
 - **MCP (Model Context Protocol)**: To expose retrieval tools as a reusable, language-agnostic server.
-- **FastMCP**: The Python SDK for building MCP servers quickly.
+- **FastMCP**: The high-level server API bundled in the MCP Python SDK (`mcp.server.fastmcp`).
 - **langchain-mcp-adapters**: To let a LangChain agent consume MCP tools over HTTP.
 - **LangChain Agentic RAG**: Using `create_agent` (2026 syntax) with MCP-loaded tools.
 - **LangGraph**: For agent orchestration with streaming support.
@@ -162,11 +162,11 @@ We will use **uv** for Python project management.
 
 4. **Add dependencies** (2026 versions). Note the new **MCP** packages:
    ```bash
-   uv add streamlit "qdrant-client[fastembed]" fastembed pymupdf4llm langchain-pymupdf4llm langchain-text-splitters langchain-ollama langchain "langchain-core>=1.0" langgraph "mcp[cli]" fastmcp langchain-mcp-adapters
+   uv add streamlit "qdrant-client[fastembed]" fastembed pymupdf4llm langchain-pymupdf4llm langchain-text-splitters langchain-ollama langchain "langchain-core>=1.0" langgraph "mcp[cli]" langchain-mcp-adapters
    ```
 
    > **Note**: We use **native qdrant-client** (NOT langchain-qdrant) for collection management and hybrid search. The new pieces are:
-   > - **`mcp[cli]`** / **`fastmcp`** → build & run the MCP server.
+   > - **`mcp[cli]`** → build & run the MCP server. It bundles **FastMCP** (`from mcp.server.fastmcp import FastMCP`) and the `mcp` CLI (`mcp dev`). You do **not** need the separate `fastmcp` package.
    > - **`langchain-mcp-adapters`** → let the agent consume MCP tools over HTTP.
 
 ---
@@ -409,7 +409,79 @@ You should see it listening on `http://127.0.0.1:8000/mcp`. Keep this terminal o
 
 ---
 
-## 🌐 Task 11: Ingestion Script (Populate Qdrant)
+## 🔬 Task 11: Test the MCP Server with the MCP Inspector
+
+**Before** wiring up the agent, verify your MCP server works in isolation using the **MCP Inspector** — an official browser-based debugging UI for MCP servers. This lets you list tools, inspect their schemas, and call them manually so you can confirm the server is correct *independently* of the agent and the LLM.
+
+🔗 Reference: [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
+
+### Prerequisites
+- Node.js installed (`node --version`). The Inspector runs via `npx`, so no global install is required.
+- `mcp[cli]` installed (Task 6) — this gives you the `mcp` CLI, including `mcp dev`.
+- **Qdrant populated** (do Task 12 first if you want `retrieve_context` to return real chunks — otherwise it will simply return "No relevant documents found.").
+
+### Launch with `mcp dev` — server *and* Inspector together
+
+The MCP Python SDK bundles a one-command workflow that spins up your server and opens the Inspector wired to it automatically. You do **not** need a separate `mcp_server.py` terminal for this — `mcp dev` runs the server for you:
+
+```bash
+uv run mcp dev mcp_server.py
+```
+
+This launches the Inspector (downloading it via `npx` on first run) and prints a local URL with a pre-filled auth token, e.g.:
+```
+🔗 Open inspector with token pre-filled:
+   http://localhost:6274/?MCP_PROXY_AUTH_TOKEN=...
+```
+Open that URL — the Inspector is already connected to your server. Continue with **List the tools** below.
+
+> 💡 `mcp dev` runs your `FastMCP` object over a dev transport for inspection, so it works regardless of the `transport=` you set in `__main__`. It is the fastest way to iterate on tools.
+
+### Steps
+
+Once the Inspector is connected to your server:
+
+1. **List the tools:** Open the **Tools** tab and click **List Tools**. You should see:
+   - `retrieve_context` (with `query: string`, `limit: int` parameters)
+   - `server_info`
+
+   Confirm the parameter names, types, and descriptions match what you defined with `@mcp.tool()`. This is exactly the schema your agent will discover over HTTP.
+
+2. **Call a tool manually:**
+   - Select `retrieve_context`, type a `query` (e.g., a phrase from your ingested PDF), set `limit` to `5`, and click **Run Tool**.
+   - Inspect the returned text. If Qdrant is populated, you should see ranked chunks with sources and RRF scores. If it returns "No relevant documents found.", ingest a document first (Task 12).
+   - Call `server_info` to confirm a simple no-argument tool also works.
+
+3. **Watch the request/response pane:** The Inspector shows the raw MCP messages exchanged over HTTP. Use this to debug schema errors, exceptions thrown inside your tool, or transport mismatches.
+
+> ✅ **Gate:** Do not move on to the agent until the Inspector lists your tools and `retrieve_context` returns results. If the Inspector can't reach the server, neither will the agent.
+
+### One-line alternative (CLI mode)
+
+You can also exercise the server headlessly from the terminal — handy for quick checks or CI. This connects to the **HTTP endpoint**, so first start the server in another terminal (`uv run python mcp_server.py`), then run:
+
+```bash
+# List tools
+npx @modelcontextprotocol/inspector --cli http://127.0.0.1:8000/mcp --transport http --method tools/list
+
+# Call the retrieval tool
+npx @modelcontextprotocol/inspector --cli http://127.0.0.1:8000/mcp --transport http \
+  --method tools/call --tool-name retrieve_context --tool-arg query="your question" --tool-arg limit=5
+```
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| `mcp dev` fails to start | Wrong file / no server object | Run `uv run mcp dev mcp_server.py` from the project root; the file must define a top-level `mcp = FastMCP(...)` |
+| Inspector page won't open | Missing auth token | Use the full printed URL including `?MCP_PROXY_AUTH_TOKEN=...` |
+| Tools list is empty | `@mcp.tool()` not applied / wrong module run | Verify the decorators and that you ran the correct file |
+| `retrieve_context` returns nothing | Qdrant empty | Run the ingestion step (Task 12) first |
+| CLI mode: connection refused on `:8000` | HTTP server not running | Start `uv run python mcp_server.py` before using `--cli` against `http://127.0.0.1:8000/mcp` |
+
+---
+
+## 🌐 Task 12: Ingestion Script (Populate Qdrant)
 
 Because tools are now stateless and remote, you need a one-time **ingestion** step that loads a PDF into Qdrant. The MCP tools will then query whatever is already stored.
 
@@ -441,7 +513,7 @@ uv run python ingest.py documents/your_file.pdf
 
 ---
 
-## 🤖 Task 12: Create the Agent as an MCP Client (over HTTP)
+## 🤖 Task 13: Create the Agent as an MCP Client (over HTTP)
 
 Now the agent connects to the MCP server **over HTTP**, discovers the tools dynamically, and binds them — it must NOT import `hybrid_search_rrf` directly.
 
@@ -456,13 +528,15 @@ from langgraph.checkpoint.memory import InMemorySaver
 MCP_URL = "http://127.0.0.1:8000/mcp"
 
 # TODO: Configure the MCP client to reach your server over HTTP.
-# The transport MUST be "streamable_http" to match the server.
+# In langchain-mcp-adapters the streamable-HTTP transport value is "http"
+# ("streamable_http" is also accepted as an alias). The server side runs
+# mcp.run(transport="streamable-http") — same transport, different spelling.
 def build_mcp_client():
     return MultiServerMCPClient(
         {
             "rag": {
                 "url": ___,                 # MCP_URL
-                "transport": ___,           # "streamable_http"
+                "transport": ___,           # "http"
             }
         }
     )
@@ -501,7 +575,7 @@ async def create_rag_agent():
 
 ---
 
-## 🔗 Task 13: Streaming the Agent Response (2026 Recommended)
+## 🔗 Task 14: Streaming the Agent Response (2026 Recommended)
 
 **Your Task:** Stream the agent's response using **2026 `stream_mode="values"` syntax**. Because MCP tool calls are async, the streamer is async too:
 
@@ -530,7 +604,7 @@ async def stream_agent_response(agent, user_query, thread_id="session_001"):
 
 ---
 
-## 🖥️ Task 14: Build the Streamlit UI (MCP Client)
+## 🖥️ Task 15: Build the Streamlit UI (MCP Client)
 
 The Streamlit app is now a thin **MCP client + chat UI**. It does NOT do retrieval itself — it asks the agent, which calls the MCP server over HTTP.
 
