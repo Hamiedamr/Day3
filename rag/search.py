@@ -1,14 +1,26 @@
+from fastembed import SparseTextEmbedding, TextEmbedding
 from qdrant_client import QdrantClient, models
+
+from rag.config import (
+    COLLECTION_NAME,
+    DENSE_EMBED_MODEL,
+    QDRANT_URL,
+    SPARSE_EMBED_MODEL,
+)
 
 
 def hybrid_search_rrf(
-    client,
-    collection_name,
     query_text,
-    dense_embedder,
-    sparse_embedder,
+    collection_name=COLLECTION_NAME,
     limit=5,
+    client=None,
+    dense_embedder=None,
+    sparse_embedder=None,
 ):
+    client = client or QdrantClient(url=QDRANT_URL)
+    dense_embedder = dense_embedder or TextEmbedding(model_name=DENSE_EMBED_MODEL)
+    sparse_embedder = sparse_embedder or SparseTextEmbedding(model_name=SPARSE_EMBED_MODEL)
+
     dense_query = list(dense_embedder.embed([query_text]))[0]
     sparse_query = list(sparse_embedder.embed([query_text]))[0]
 

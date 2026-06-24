@@ -4,7 +4,7 @@ CHUNK_OVERLAP = 50
 
 # Qdrant (Task 8)
 QDRANT_URL = "http://localhost:6333"
-COLLECTION_NAME = "rag_collection"
+COLLECTION_NAME = "documents"
 DENSE_EMBED_MODEL = "jinaai/jina-embeddings-v2-base-en"
 SPARSE_EMBED_MODEL = "Qdrant/bm25"
 
