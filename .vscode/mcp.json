@@ -6,10 +6,3 @@
     }
   }
 }
-
-
-Use the rag-docs MCP server and retrieve_context tool. What is this document about? Answer based only on the retrieved context.
-
-Use retrieve_context from the rag-docs MCP server. Based only on the document, list the steps required to enable SELinux on Ubuntu.
-
-Use the rag-docs MCP server and retrieve_context tool. What commands are used to install the SELinux packages?
