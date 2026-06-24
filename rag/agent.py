@@ -1,5 +1,6 @@
 from langchain.agents import create_agent
 from langchain.tools import tool
+from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import InMemorySaver
 
 from rag.config import OLLAMA_MODEL, SEARCH_LIMIT
@@ -46,7 +47,7 @@ def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embe
     """
 
     agent = create_agent(
-        model=OLLAMA_MODEL,
+        model=ChatOllama(model=OLLAMA_MODEL, temperature=0),
         tools=[retrieve_context],
         system_prompt=system_prompt,
         checkpointer=InMemorySaver(),

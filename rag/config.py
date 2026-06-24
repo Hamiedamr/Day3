@@ -9,5 +9,5 @@ DENSE_EMBED_MODEL = "jinaai/jina-embeddings-v2-base-en"
 SPARSE_EMBED_MODEL = "Qdrant/bm25"
 
 # Ollama / Agent (Task 10)
-OLLAMA_MODEL = "ollama:qwen3:4b-instruct"
+OLLAMA_MODEL = "qwen3:4b-instruct"
 SEARCH_LIMIT = 5

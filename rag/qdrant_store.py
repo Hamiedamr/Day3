@@ -22,21 +22,22 @@ def setup_qdrant_collection(chunks):
     sample_embedding = list(dense_embedder.embed(["sample text"]))[0]
     vector_size = len(sample_embedding)
 
-    if not client.collection_exists(collection_name=collection_name):
-        client.create_collection(
-            collection_name=collection_name,
-            vectors_config={
-                "dense": models.VectorParams(
-                    size=vector_size,
-                    distance=models.Distance.COSINE,
-                )
-            },
-            sparse_vectors_config={
-                "sparse": models.SparseVectorParams(
-                    index=models.SparseIndexParams(on_disk=False)
-                )
-            },
-        )
+    if client.collection_exists(collection_name=collection_name):
+        client.delete_collection(collection_name=collection_name)
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config={
+            "dense": models.VectorParams(
+                size=vector_size,
+                distance=models.Distance.COSINE,
+            )
+        },
+        sparse_vectors_config={
+            "sparse": models.SparseVectorParams(
+                index=models.SparseIndexParams(on_disk=False)
+            )
+        },
+    )
 
     points = []
     texts = [chunk.page_content for chunk in chunks]

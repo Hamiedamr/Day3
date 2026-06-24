@@ -1,34 +1,71 @@
-from rag import load_and_split_pdf, setup_qdrant_collection, create_rag_agent, stream_with_updates
+import os
 
-PDF_FILES = [
-    "documents/Abdelazim_Rabie_Backend_NodeJS.pdf",
-    "documents/Manar Rabie (UX_UI Designer).pdf",
-]
+import streamlit as st
 
-TEST_QUERY = "What backend technologies does Abdelazim know?"
+from rag import (
+    load_and_split_pdf,
+    setup_qdrant_collection,
+    create_rag_agent,
+    stream_agent_response,
+)
 
+st.title("📚 Agentic RAG System")
 
-def main():
-    all_chunks = []
-    for path in PDF_FILES:
-        chunks = load_and_split_pdf(path)
-        print(f"{path}: {len(chunks)} chunks", flush=True)
-        all_chunks.extend(chunks)
+if "agent" not in st.session_state:
+    st.session_state.agent = None
+if "qdrant_client" not in st.session_state:
+    st.session_state.qdrant_client = None
+if "collection_name" not in st.session_state:
+    st.session_state.collection_name = None
+if "dense_embedder" not in st.session_state:
+    st.session_state.dense_embedder = None
+if "sparse_embedder" not in st.session_state:
+    st.session_state.sparse_embedder = None
 
-    print(f"\nSetting up Qdrant collection with {len(all_chunks)} chunks...", flush=True)
-    client, collection_name, dense_embedder, sparse_embedder = setup_qdrant_collection(all_chunks)
-    print(f"Collection ready: {collection_name}", flush=True)
+uploaded_file = st.sidebar.file_uploader("Upload a PDF document", type=["pdf"])
 
-    print("\nCreating agentic RAG agent...", flush=True)
-    agent = create_rag_agent(client, collection_name, dense_embedder, sparse_embedder)
-    print(f"Agent ready\n", flush=True)
+if uploaded_file and st.session_state.get("processed_file") != uploaded_file.name:
+    temp_path = os.path.join("documents", uploaded_file.name)
+    with open(temp_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
 
-    print(f"{'=' * 60}")
-    print(f"Streaming query: {TEST_QUERY}")
-    print("=" * 60, flush=True)
+    with st.spinner("Processing document with native Qdrant..."):
+        chunks = load_and_split_pdf(temp_path)
 
-    stream_with_updates(agent, TEST_QUERY, thread_id="test_001")
+        qdrant_client, collection_name, dense_embedder, sparse_embedder = (
+            setup_qdrant_collection(chunks)
+        )
 
+        st.session_state.qdrant_client = qdrant_client
+        st.session_state.collection_name = collection_name
+        st.session_state.dense_embedder = dense_embedder
+        st.session_state.sparse_embedder = sparse_embedder
 
-if __name__ == "__main__":
-    main()
+        st.session_state.agent = create_rag_agent(
+            qdrant_client, collection_name, dense_embedder, sparse_embedder
+        )
+
+    st.success("Document processed with hybrid search (RRF fusion)! Agent is ready.")
+    st.session_state.processed_file = uploaded_file.name
+
+user_input = st.chat_input("Ask a question about your document...")
+
+if user_input and st.session_state.agent:
+    st.chat_message("user").write(user_input)
+
+    with st.chat_message("assistant"):
+        response_placeholder = st.empty()
+        full_response = ""
+
+        for token in stream_agent_response(
+            st.session_state.agent,
+            user_input,
+            thread_id="session_001",
+        ):
+            full_response += token
+            response_placeholder.markdown(full_response + "▌")
+
+        response_placeholder.markdown(full_response)
+
+elif user_input and not st.session_state.agent:
+    st.warning("Please upload a document first!")
