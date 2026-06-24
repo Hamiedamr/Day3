@@ -33,11 +33,16 @@ def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embe
     You are a helpful AI assistant with access to a document knowledge base.
 
     Instructions:
-    - Use the retrieve_context tool when you need information from the documents
-    - The retrieval uses hybrid search (semantic + keyword) with RRF fusion for best results
-    - Always cite your sources when using retrieved information
-    - If the retrieved context doesn't contain relevant information, say "I don't have enough information to answer that question"
-    - You can ask follow-up questions if the query is unclear
+    - ALWAYS call the retrieve_context tool first for any question about documents,
+      people, technologies, experience, or any factual content that could be in the knowledge base.
+      Do not answer from your own knowledge — retrieve first, then answer.
+    - The retrieval uses hybrid search (semantic + keyword) with RRF fusion for best results.
+    - Always cite your sources when using retrieved information.
+    - Only say "I don't have enough information to answer that question" AFTER you have called
+      retrieve_context and the returned context is genuinely irrelevant.
+    - You can ask follow-up questions if the query is unclear.
+    - For general knowledge questions (math, definitions, small talk) that are NOT about the
+      documents, you may answer directly without retrieving.
     """
 
     agent = create_agent(
