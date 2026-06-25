@@ -1,8 +1,17 @@
+# MCP Test Video
+
+<video width="640" height="360" controls>
+  <source src="./assets/using_mcp_server_by_opencode_cli.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+- if the sounds are not playing, got to assets/using_mcp_server_by_opencode_cli.mp4.
+
 # 📚 Lab: Building an Agentic RAG System
 
 Welcome to the **Agentic Retrieval-Augmented Generation (RAG) Lab**! In this lab, you will build a local, privacy-first AI application that uses an **intelligent agent** to decide when to retrieve documents and answer questions about them.
 
 Unlike simple RAG chains, an **Agentic RAG** system uses a ReAct-style agent that can:
+
 - 🤔 **Decide** whether it needs to search for documents or can answer directly
 - 🔍 **Retrieve** context only when needed
 - 🧠 **Reason** through complex queries requiring multiple searches
@@ -19,6 +28,7 @@ We will be using a powerful modern AI stack:
 - **Streamlit**: To build a beautiful, interactive web user interface.
 
 **Important**: We will use **native Qdrant client** (NOT langchain-qdrant) for:
+
 - Collection creation with explicit vector configurations
 - Points insertion using `upload_points`
 - Hybrid search with RRF fusion using `prefetch` and `query_points`
@@ -32,11 +42,14 @@ Follow the tasks below step-by-step to complete your Agentic RAG system.
 Before we start coding, let's set up our workspace.
 
 1. Ensure you have Git installed on your machine.
+
 2. Clone this repository to your local machine:
+   
    ```bash
    git clone <YOUR_REPO_URL_HERE>
    cd <REPO_NAME>
    ```
+
 3. Create a folder named `documents` to temporarily store your test PDF files.
 
 ---
@@ -48,7 +61,9 @@ We need Docker to run our Qdrant vector database in an isolated container.
 🔗 Reference: [Docker Official Installation Guide](https://docs.docker.com/get-docker/)
 
 1. Download and install Docker Desktop for your operating system.
+
 2. Open your terminal and verify the installation:
+   
    ```bash
    docker --version
    ```
@@ -62,27 +77,30 @@ Qdrant is a high-performance vector search engine. We will run it locally using 
 🔗 Reference: [Qdrant Quickstart Documentation](https://qdrant.tech/documentation/quickstart/)
 
 1. Open your terminal and pull the Qdrant Docker image:
+   
    ```bash
    docker pull qdrant/qdrant
    ```
 
 2. Run the Qdrant container, exposing the necessary ports:
-
    **Mac/Linux (bash):**
+   
    ```bash
    docker run -p 6333:6333 -p 6334:6334 \
        -v $(pwd)/qdrant_storage:/qdrant/storage:z \
        qdrant/qdrant
    ```
-
+   
    **Windows (PowerShell):**
+   
    ```powershell
    docker run -p 6333:6333 -p 6334:6334 `
        -v "${PWD}/qdrant_storage:/qdrant/storage:z" `
        qdrant/qdrant
    ```
-
+   
    **Windows (cmd):**
+   
    ```cmd
    docker run -p 6333:6333 -p 6334:6334 -v "%cd%/qdrant_storage:/qdrant/storage:z" qdrant/qdrant
    ```
@@ -98,7 +116,9 @@ Ollama allows us to run large language models locally.
 🔗 Reference: [Ollama Download Page](https://ollama.com/download)
 
 1. Download and install Ollama for your OS.
+
 2. Verify the installation:
+   
    ```bash
    ollama --version
    ```
@@ -108,9 +128,11 @@ Ollama allows us to run large language models locally.
 ## 🧠 Task 5: Download the Qwen3 4B Instruct Model
 
 1. Download the model:
+   
    ```bash
    ollama run qwen3:4b-instruct
    ```
+
 2. Type "Hello" to test, then `/bye` to exit.
 
 ---
@@ -122,10 +144,12 @@ We will use **uv** for Python project management.
 🔗 Reference: [uv Official Documentation](https://docs.astral.sh/uv/)
 
 1. **Install uv**:
+   
    - **Mac/Linux:** `curl -LsSf https://astral.sh/uv/install.sh | sh`
    - **Windows:** `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
 
 2. **Initialize the project**:
+   
    ```bash
    uv init
    ```
@@ -133,6 +157,7 @@ We will use **uv** for Python project management.
 3. **Rename** `hello.py` to `app.py`.
 
 4. **Add dependencies** (2026 versions):
+   
    ```bash
    uv add streamlit "qdrant-client[fastembed]" fastembed pymupdf4llm langchain-pymupdf4llm langchain-text-splitters langchain-ollama langchain "langchain-core>=1.0" langgraph
    ```
@@ -152,16 +177,16 @@ from langchain_text_splitters import MarkdownTextSplitter
 def load_and_split_pdf(file_path):
     # TODO: Initialize PyMuPDF4LLMLoader with the given file path
     loader = PyMuPDF4LLMLoader(file_path=___)
-    
+
     # TODO: Load the document
     docs = loader.___()
-    
+
     # TODO: Initialize MarkdownTextSplitter with appropriate chunk settings
     splitter = MarkdownTextSplitter(chunk_size=___, chunk_overlap=___)
-    
+
     # TODO: Split the documents into chunks
     chunks = splitter.split_documents(___)
-    
+
     return chunks
 ```
 
@@ -178,26 +203,26 @@ import uuid
 
 def setup_qdrant_collection(chunks):
     """Setup Qdrant collection using native client with dense + sparse vectors.
-    
+
     Uses FastEmbed for generating embeddings locally.
     """
     # TODO: Initialize Native Qdrant Client
     client = QdrantClient(url=___)
-    
+
     # TODO: Initialize embedding models (FastEmbed)
     dense_embedding_model = ___  # e.g., "jinaai/jina-embeddings-v2-base-en"
     sparse_embedding_model = ___  # e.g., "Qdrant/bm25" or "prithivida/Splade_PP_en_v1"
-    
+
     dense_embedder = TextEmbedding(model_name=dense_embedding_model)
     sparse_embedder = SparseTextEmbedding(model_name=sparse_embedding_model)
-    
+
     # TODO: Create collection with explicit vector configurations
     collection_name = ___
-    
+
     # Get embedding dimensions by encoding a sample text
     sample_embedding = list(dense_embedder.embed(["sample text"]))[0]
     vector_size = len(sample_embedding)
-    
+
     # Create collection if it doesn't exist
     if not client.collection_exists(collection_name=___):
         client.create_collection(
@@ -214,21 +239,21 @@ def setup_qdrant_collection(chunks):
                 )
             }
         )
-    
+
     # TODO: Prepare points for upload with dense + sparse vectors
     points = []
     texts = [chunk.page_content for chunk in ___]
-    
+
     # Generate embeddings in batches
     dense_vectors = list(dense_embedder.embed(texts))
     sparse_vectors = list(sparse_embedder.embed(texts))
-    
+
     for idx, (chunk, dense_vec, sparse_vec) in enumerate(zip(chunks, dense_vectors, sparse_vectors)):
         # Convert sparse vector to Qdrant format
         # FastEmbed returns sparse vectors with .indices and .values attributes
         sparse_indices = sparse_vec.indices.tolist()
         sparse_values = sparse_vec.values.tolist()
-        
+
         point = models.PointStruct(
             id=str(uuid.uuid4()),  # or use idx for integer IDs
             vector={
@@ -245,7 +270,7 @@ def setup_qdrant_collection(chunks):
             }
         )
         points.append(point)
-    
+
     # TODO: Upload points using native upload_points (with parallelization)
     client.upload_points(
         collection_name=___,
@@ -255,7 +280,7 @@ def setup_qdrant_collection(chunks):
         max_retries=___,     # e.g., 3
         wait=False           # Async mode for better performance
     )
-    
+
     return client, collection_name, dense_embedder, sparse_embedder
 ```
 
@@ -268,17 +293,17 @@ def setup_qdrant_collection(chunks):
 ```python
 def hybrid_search_rrf(client, collection_name, query_text, dense_embedder, sparse_embedder, limit=5):
     """Perform hybrid search using dense + sparse vectors with RRF fusion.
-    
+
     Uses the native Qdrant Query API with prefetch and RRF fusion.
     """
     # TODO: Generate embeddings for the query
     dense_query = list(dense_embedder.embed([___]))[0]
     sparse_query = list(sparse_embedder.embed([___]))[0]
-    
+
     # Convert sparse vector
     sparse_indices = sparse_query.indices.tolist()
     sparse_values = sparse_query.values.tolist()
-    
+
     # TODO: Perform hybrid search with RRF fusion using prefetch
     results = client.query_points(
         collection_name=___,
@@ -306,7 +331,7 @@ def hybrid_search_rrf(client, collection_name, query_text, dense_embedder, spars
         with_payload=True,
         limit=___  # Final number of results to return
     )
-    
+
     # TODO: Extract and return the documents
     documents = []
     for point in results.points:
@@ -317,7 +342,7 @@ def hybrid_search_rrf(client, collection_name, query_text, dense_embedder, spars
             "id": point.id
         }
         documents.append(doc)
-    
+
     return documents
 ```
 
@@ -336,12 +361,12 @@ from langgraph.checkpoint.memory import InMemorySaver  # For conversation memory
 
 def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embedder):
     """Create an agentic RAG agent with native Qdrant hybrid search tool."""
-    
+
     # TODO: Define the retrieval tool using native Qdrant hybrid search
     @tool(response_format=___)  # Use "content_and_artifact" for best results
     def retrieve_context(query: str):
         """Retrieve relevant documents using hybrid search with RRF fusion.
-        
+
         Args:
             query: The search query to find relevant documents
         """
@@ -354,18 +379,18 @@ def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embe
             sparse_embedder=___,
             limit=___
         )
-        
+
         # TODO: Format the retrieved documents
         serialized = "\n\n".join(
             f"Source: {doc['metadata']}\nContent: {doc['content']}\nScore: {doc['score']}"
             for doc in docs
         )
         return serialized, docs
-    
+
     # TODO: Define the system prompt
     system_prompt = """
     You are a helpful AI assistant with access to a document knowledge base.
-    
+
     Instructions:
     - Use the retrieve_context tool when you need information from the documents
     - The retrieval uses hybrid search (semantic + keyword) with RRF fusion for best results
@@ -373,7 +398,7 @@ def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embe
     - If the retrieved context doesn't contain relevant information, say "I don't have enough information to answer that question"
     - You can ask follow-up questions if the query is unclear
     """
-    
+
     # TODO: Create the agent using create_agent (2026 syntax)
     # The model string "ollama:<model>" is used directly — no separate ChatOllama import needed
     agent = create_agent(
@@ -382,7 +407,7 @@ def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embe
         system_prompt=___,   # System instructions
         checkpointer=___,    # InMemorySaver() for conversation persistence
     )
-    
+
     return agent
 ```
 
@@ -395,26 +420,26 @@ def create_rag_agent(qdrant_client, collection_name, dense_embedder, sparse_embe
 ```python
 def stream_agent_response(agent, user_query, thread_id="default"):
     """Stream the agent response with stream_mode='values' (2026 recommended approach).
-    
+
     Args:
         agent: The created agent
         user_query: The user's question
         thread_id: Conversation thread ID for persistence
     """
     from langchain.messages import AIMessage, HumanMessage
-    
+
     # TODO: Prepare the input messages (2026 format)
     inputs = {
         "messages": [{"role": "user", "content": ___}]
     }
-    
+
     # TODO: Prepare config with thread_id for conversation memory
     config = {
         "configurable": {
             "thread_id": ___  # Required for checkpointer to work
         }
     }
-    
+
     # TODO: Stream with stream_mode="values" (2026 recommended approach)
     # Each chunk contains the full state at that point
     for chunk in agent.stream(
@@ -424,7 +449,7 @@ def stream_agent_response(agent, user_query, thread_id="default"):
     ):
         # Access the latest message from the state
         latest_message = chunk["messages"][-1]
-        
+
         if isinstance(latest_message, AIMessage) and latest_message.content:
             yield latest_message.content
         elif hasattr(latest_message, 'tool_calls') and latest_message.tool_calls:
@@ -474,20 +499,20 @@ if uploaded_file:
     temp_path = os.path.join(___, uploaded_file.name)
     with open(temp_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
-    
+
     # TODO: Process and store document
     with st.spinner("Processing document with native Qdrant..."):
         # Load and split PDF
         chunks = ___(___)
-        
+
         # Setup native Qdrant collection with dense + sparse vectors
         qdrant_client, collection_name, dense_embedder, sparse_embedder = ___(___)
-        
+
         st.session_state.qdrant_client = qdrant_client
         st.session_state.collection_name = collection_name
         st.session_state.dense_embedder = dense_embedder
         st.session_state.sparse_embedder = sparse_embedder
-        
+
         # TODO: Create the agent with native Qdrant components
         st.session_state.agent = ___(
             qdrant_client,
@@ -495,7 +520,7 @@ if uploaded_file:
             dense_embedder,
             sparse_embedder
         )
-    
+
     st.success("Document processed with hybrid search (RRF fusion)! Agent is ready.")
 
 # TODO: Create Chat Interface
@@ -504,12 +529,12 @@ user_input = st.chat_input(___)
 if user_input and st.session_state.agent:
     # TODO: Display user message
     st.chat_message("user").write(___)
-    
+
     # TODO: Display assistant response with streaming
     with st.chat_message("assistant"):
         response_placeholder = st.empty()
         full_response = ""
-        
+
         # TODO: Stream the response using agent.stream (synchronous — no async needed)
         for token in stream_agent_response(
             st.session_state.agent,
@@ -518,10 +543,10 @@ if user_input and st.session_state.agent:
         ):
             full_response += token
             response_placeholder.markdown(full_response + "▌")
-        
+
         # Final update without cursor
         response_placeholder.markdown(full_response)
-        
+
 elif user_input and not st.session_state.agent:
     st.warning("Please upload a document first!")
 ```
@@ -536,16 +561,16 @@ For better visibility into the agent's reasoning using different stream modes:
 def stream_with_updates(agent, user_query):
     """Stream with stream_mode='values' for full visibility into agent steps."""
     from langchain.messages import AIMessage, HumanMessage, ToolMessage
-    
+
     config = {"configurable": {"thread_id": "session_001"}}
-    
+
     for chunk in agent.stream(
         {"messages": [{"role": "user", "content": user_query}]},
         stream_mode="values",
         config=config
     ):
         latest_message = chunk["messages"][-1]
-        
+
         if isinstance(latest_message, HumanMessage):
             print(f"User: {latest_message.content}")
         elif isinstance(latest_message, AIMessage):
@@ -564,6 +589,7 @@ def stream_with_updates(agent, user_query):
 ```bash
 uv run streamlit run app.py
 ```
+
 ## 🔗 Resources
 
 - [Qdrant Hybrid Queries Documentation](https://qdrant.tech/documentation/search/hybrid-queries/)
