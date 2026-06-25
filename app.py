@@ -8,7 +8,10 @@ Usage:  uv run streamlit run app.py
 import asyncio
 import os
 
+import nest_asyncio
 import streamlit as st
+
+nest_asyncio.apply()
 
 from ingest import ingest
 from agent import create_rag_agent, stream_agent_response
