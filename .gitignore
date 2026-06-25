@@ -1,0 +1,4 @@
+.kilo/
+.venv311/
+__pycache__/
+qdrant_storage/

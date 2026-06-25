@@ -113,7 +113,7 @@ Ollama allows us to run large language models locally.
    ```
 2. Type "Hello" to test, then `/bye` to exit.
 
----
+--- ollama run qwen3:4b-instruct 'Hello'
 
 ## 🐍 Task 6: Python Environment & Dependencies
 
@@ -139,7 +139,7 @@ We will use **uv** for Python project management.
    
    > **Note**: We use **native qdrant-client** (NOT langchain-qdrant) for collection management and hybrid search!
 
----
+--- /
 
 ## 📄 Task 7: Document Loading & Text Splitting
 
