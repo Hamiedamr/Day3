@@ -7,9 +7,10 @@ from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain.messages import AIMessage
+from langchain_ollama import ChatOllama
 
 MCP_URL = "http://127.0.0.1:8000/mcp"
-LLM_MODEL = "ollama:qwen3:4b-instruct"
+LLM_MODEL = "qwen3:4b-instruct"
 
 
 def build_mcp_client():
@@ -31,19 +32,15 @@ async def create_rag_agent():
     # Fetch the MCP tools over HTTP — this is a network call!
     tools = await client.get_tools()
 
-    system_prompt = """You are a helpful AI assistant with access to a document knowledge base
-through MCP tools served over HTTP.
+    system_prompt = """You MUST use the retrieve_context tool for every factual question.
+Do NOT answer from your own knowledge. Base your answer strictly on the retrieved context
+and cite sources when possible."""
 
-Instructions:
-- Use the retrieve_context tool when you need information from the documents.
-- The retrieval uses hybrid search (semantic + keyword) with RRF fusion.
-- Always cite your sources when using retrieved information.
-- If the retrieved context doesn't contain relevant information, say
-  "I don't have enough information to answer that question".
-"""
-
+    # NOTE: the README suggests the "ollama:..." model string, but the current
+    # langchain create_agent does not bind tools correctly to Ollama via that
+    # string. Using ChatOllama directly makes tool calling reliable.
     agent = create_agent(
-        model=LLM_MODEL,
+        model=ChatOllama(model=LLM_MODEL),
         tools=tools,
         system_prompt=system_prompt,
         checkpointer=InMemorySaver(),
