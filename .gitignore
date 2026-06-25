@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+*.egg-info/
+.venv/
+qdrant_storage/
+documents/
